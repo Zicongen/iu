@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Local AI Chat</title>
+<style>
+:root{--bg:#faf9f5;--side:#f0eee6;--ink:#1f1e1d;--mute:#73726c;--line:#e3e0d5;--card:#fff;--user:#efece2;--acc:#c96442;--accd:#b3552f;--code:#f3f1e9;--ok:#3f8f5a;--bad:#c0392b}
+@media(prefers-color-scheme:dark){:root{--bg:#262624;--side:#1f1e1d;--ink:#f0eee6;--mute:#a09e94;--line:#3a3935;--card:#30302e;--user:#3a3935;--code:#1f1e1d}}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,"Segoe UI",Roboto,sans-serif;display:flex}
+button{font:inherit;color:inherit;cursor:pointer}
+#side{width:260px;background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:12px;gap:8px;flex:none}
+#side h1{font:600 20px Georgia,"Times New Roman",serif;margin:6px 8px 10px}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 12px;text-align:left}
+.btn:hover{border-color:var(--acc)}
+.pri{background:var(--acc);border-color:var(--acc);color:#fff}.pri:hover{background:var(--accd)}
+#list{flex:1;overflow:auto;display:flex;flex-direction:column;gap:2px}
+.ci{padding:7px 10px;border-radius:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;display:flex;justify-content:space-between;gap:6px}
+.ci:hover,.ci.on{background:var(--line)}.ci span.x{opacity:0;color:var(--mute)}.ci:hover span.x{opacity:1}
+#stat{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mute);padding:6px 8px;cursor:pointer}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--mute)}.dot.ok{background:var(--ok)}.dot.bad{background:var(--bad)}
+#main{flex:1;display:flex;flex-direction:column;min-width:0}
+#top{display:none;padding:10px 14px;border-bottom:1px solid var(--line);align-items:center;gap:10px}
+#msgs{flex:1;overflow:auto;padding:24px 16px}
+.wrap{max-width:720px;margin:0 auto}
+#hello{text-align:center;margin-top:16vh}
+#hello h2{font:400 34px Georgia,"Times New Roman",serif;margin:8px 0}
+#hello p{color:var(--mute)}
+.spark{color:var(--acc);font-size:30px}
+.m{margin:0 0 22px;display:flex;gap:12px}
+.m.u{justify-content:flex-end}
+.m.u .b{background:var(--user);border-radius:18px;padding:9px 16px;max-width:85%;white-space:pre-wrap}
+.m.a .ic{color:var(--acc);font-size:20px;line-height:1.5;flex:none}
+.m.a .b{min-width:0;flex:1;font:16px/1.7 Georgia,"Times New Roman",serif}
+.b p{margin:0 0 12px}.b ul,.b ol{margin:0 0 12px;padding-left:24px}.b h3,.b h4{font-family:inherit;margin:16px 0 8px}
+.b code{background:var(--code);padding:1px 5px;border-radius:5px;font:13.5px ui-monospace,Consolas,monospace}
+.b pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;position:relative;margin:0 0 12px}
+.b pre code{background:none;padding:0}
+.cp{position:absolute;top:6px;right:6px;font-size:12px;border:1px solid var(--line);background:var(--card);border-radius:6px;padding:2px 8px}
+.b a{color:var(--acc)}
+details.t{font:13px sans-serif;color:var(--mute);margin-bottom:10px}details.t div{white-space:pre-wrap;padding:6px 0 0 10px;border-left:2px solid var(--line);margin-top:6px}
+.cur::after{content:"";display:inline-block;width:8px;height:16px;background:var(--acc);margin-left:2px;vertical-align:-2px;animation:bl 1s steps(2) infinite}
+@keyframes bl{50%{opacity:0}}
+.err{color:var(--bad);font:14px sans-serif}
+#bar{padding:0 16px 16px}
+#box{max-width:720px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:10px 10px 10px 16px;display:flex;gap:8px;align-items:flex-end;box-shadow:0 2px 12px rgba(0,0,0,.05)}
+#box:focus-within{border-color:var(--acc)}
+#in{flex:1;border:0;outline:0;resize:none;background:none;color:var(--ink);font:inherit;max-height:200px;padding:5px 0}
+#go{width:36px;height:36px;border-radius:10px;border:0;background:var(--acc);color:#fff;font-size:18px}
+#go:disabled{opacity:.4;cursor:default}
+#note{max-width:720px;margin:6px auto 0;text-align:center;font-size:12px;color:var(--mute)}
+#dlg{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:9;padding:16px}
+#dlg.on{display:flex}
+#card{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:20px;width:100%;max-width:460px;max-height:92vh;overflow:auto}
+#card h3{font:600 20px Georgia,serif;margin:0 0 12px}
+#card label{display:block;font-size:13px;color:var(--mute);margin:12px 0 4px}
+#card input,#card select,#card textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit}
+#card .row{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+#cmsg{font-size:13px;margin-top:8px;min-height:18px}
+@media(max-width:760px){#side{position:fixed;inset:0 auto 0 0;z-index:5;transform:translateX(-100%);transition:transform .2s}#side.on{transform:none}#top{display:flex}}
+</style></head><body>
+<aside id="side">
+ <h1>Local Chat</h1>
+ <button class="btn pri" id="new">+ New chat</button>
+ <div id="list"></div>
+ <div id="stat"><span class="dot" id="dot"></span><span id="stxt">Not connected</span></div>
+</aside>
+<div id="main">
+ <div id="top"><button class="btn" id="menu">Menu</button><b id="ttl">Local Chat</b></div>
+ <div id="msgs"><div class="wrap" id="chat"></div></div>
+ <div id="bar">
+  <div id="box"><textarea id="in" rows="1" placeholder="Message your model"></textarea><button id="go" title="Send">&#8593;</button></div>
+  <div id="note">Runs on your own server. Replies can be wrong, so check anything important.</div>
+ </div>
+</div>
+<div id="dlg"><div id="card">
+ <h3>Connect to server</h3>
+ <label>Server URL (Ollama or Cloudflare tunnel)</label>
+ <input id="url" placeholder="https://xxxx.trycloudflare.com">
+ <label>Model</label>
+ <input id="model" list="mlist" placeholder="qwen3.8-27b-uncensored-mtp" autocomplete="off"><datalist id="mlist"></datalist>
+ <label>System prompt (optional)</label>
+ <textarea id="sys" rows="2" placeholder="You are a helpful assistant."></textarea>
+ <label>Temperature: <span id="tv">0.7</span></label>
+ <input id="temp" type="range" min="0" max="1.5" step="0.1" value="0.7">
+ <label>Context length</label>
+ <input id="ctx" type="number" value="65536">
+ <div id="cmsg"></div>
+ <div class="row"><button class="btn" id="close">Close</button><button class="btn pri" id="conn">Connect</button></div>
+</div></div>
+<script>
+const $=id=>document.getElementById(id);
+const K="localchat.v1";
+let S=JSON.parse(localStorage.getItem(K)||"null")||{chats:[],cur:null,cfg:{url:"",model:"",sys:"",temp:0.7,ctx:65536}};
+let busy=false,ctl=null;
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
+const cfg=()=>S.cfg;
+function base(){let u=cfg().url.trim().replace(/\/+$/,"").replace(/\/(v1|api)$/,"");
+ if(u&&!/^https?:\/\//.test(u))u=(/^(localhost|127\.|192\.168\.)/.test(u)?"http://":"https://")+u;return u}
+function hint(e){return /Failed to fetch|NetworkError|Load failed|403/.test(e.message)?" Most likely a browser CORS block: restart Ollama with OLLAMA_ORIGINS=* (see the fix cell), or the tunnel URL is out of date.":""}
+const chat=()=>S.chats.find(c=>c.id===S.cur);
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function inl(s){return esc(s).replace(/`([^`]+)`/g,"<code>$1</code>").replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>").replace(/(^|[^*])\*([^*\n]+)\*/g,"$1<i>$2</i>").replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')}
+function md(t){
+ const parts=t.split(/```/);let out="";
+ parts.forEach((p,i)=>{
+  if(i%2){const nl=p.indexOf("\n");const code=nl<0?p:p.slice(nl+1);out+='<pre><button class="cp">Copy</button><code>'+esc(code.replace(/\n$/,""))+"</code></pre>";return}
+  let lines=p.split("\n"),html="",list=null,para=[];
+  const flush=()=>{if(para.length){html+="<p>"+inl(para.join("<br>"))+"</p>";para=[]}};
+  const end=()=>{if(list){html+="</"+list+">";list=null}};
+  for(const l of lines){
+   let m;
+   if(m=l.match(/^(#{1,4})\s+(.*)/)){flush();end();html+="<h4>"+inl(m[2])+"</h4>"}
+   else if(m=l.match(/^\s*[-*]\s+(.*)/)){flush();if(list!=="ul"){end();html+="<ul>";list="ul"}html+="<li>"+inl(m[1])+"</li>"}
+   else if(m=l.match(/^\s*\d+[.)]\s+(.*)/)){flush();if(list!=="ol"){end();html+="<ol>";list="ol"}html+="<li>"+inl(m[1])+"</li>"}
+   else if(!l.trim()){flush();end()}
+   else{end();para.push(l)}
+  }
+  flush();end();out+=html;
+ });
+ return out;
+}
+function splitThink(m){
+ let c=m.content||"",th=m.think||"";
+ const a=c.indexOf("<think>");
+ if(a>-1){const b=c.indexOf("</think>");th+=c.slice(a+7,b>-1?b:undefined);c=c.slice(0,a)+(b>-1?c.slice(b+8):"")}
+ return{c:c.trim(),th:th.trim()};
+}
+function greet(){const h=new Date().getHours();return h<5?"Working late":h<12?"Good morning":h<18?"Good afternoon":"Good evening"}
+function render(){
+ const c=chat(),el=$("chat");
+ $("ttl").textContent=c?c.title:"Local Chat";
+ if(!c||!c.msgs.length){el.innerHTML='<div id="hello"><div class="spark">&#10022;</div><h2>'+greet()+'</h2><p>'+(cfg().model?"Chatting with "+esc(cfg().model):"Open the connection settings to link your server.")+"</p></div>";renderList();return}
+ el.innerHTML=c.msgs.map((m,i)=>{
+  if(m.role==="user")return '<div class="m u"><div class="b">'+esc(m.content)+"</div></div>";
+  const s=splitThink(m);
+  const th=s.th?'<details class="t"><summary>Thinking</summary><div>'+esc(s.th)+"</div></details>":"";
+  const live=busy&&i===c.msgs.length-1;
+  return '<div class="m a"><div class="ic">&#10022;</div><div class="b'+(live?" cur":"")+'" data-i="'+i+'">'+th+(live&&!s.c&&!s.th?'<span style="color:var(--mute);font:14px sans-serif">Waiting for the model...</span>':md(s.c))+(m.err?'<div class="err">'+esc(m.err)+"</div>":"")+"</div></div>";
+ }).join("");
+ renderList();
+}
+function renderList(){
+ $("list").innerHTML=S.chats.map(c=>'<div class="ci'+(c.id===S.cur?" on":"")+'" data-id="'+c.id+'"><span>'+esc(c.title)+'</span><span class="x" data-del="'+c.id+'">&#10005;</span></div>').join("");
+}
+function scroll(){const s=$("msgs");s.scrollTop=s.scrollHeight}
+function newChat(){const c={id:Date.now()+"",title:"New chat",msgs:[]};S.chats.unshift(c);S.cur=c.id;save();render();$("side").classList.remove("on")}
+function setStat(kind,txt){$("dot").className="dot "+kind;$("stxt").textContent=txt}
+async function connect(){
+ const u=$("url").value.trim();if(!u){$("cmsg").textContent="Enter a server URL.";return}
+ cfg().url=u;$("cmsg").style.color="";$("cmsg").textContent="Connecting...";
+ try{
+  const r=await fetch(base()+"/api/tags");if(!r.ok)throw new Error("HTTP "+r.status);
+  const d=await r.json(),names=(d.models||[]).map(m=>m.name);
+  if(!names.length)throw new Error("Server reached, but no models are installed");
+  $("mlist").innerHTML=names.map(n=>'<option value="'+esc(n)+'">').join("");
+  if(!$("model").value||!names.includes($("model").value))$("model").value=names.find(n=>/mtp/i.test(n))||names[0];
+  cfg().model=$("model").value;
+  $("cmsg").style.color="var(--ok)";$("cmsg").textContent="Connected. "+names.length+" model(s) found.";
+  setStat("ok",cfg().model);
+ }catch(e){
+  $("cmsg").style.color="var(--bad)";
+  $("cmsg").textContent="Could not connect ("+e.message+")."+hint(e)+" Also check that the notebook is still running.";
+  setStat("bad","Connection failed");
+ }
+ save();render();
+}
+function applySettings(){
+ const c=cfg();c.url=$("url").value.trim();c.model=$("model").value||c.model;c.sys=$("sys").value;c.temp=+$("temp").value;c.ctx=+$("ctx").value||65536;save();
+}
+function openDlg(){const c=cfg();$("url").value=c.url;$("sys").value=c.sys;$("temp").value=c.temp;$("tv").textContent=c.temp;$("ctx").value=c.ctx;
+ $("model").value=c.model||"";$("dlg").classList.add("on")}
+async function send(){
+ if(busy){ctl&&ctl.abort();return}
+ const txt=$("in").value.trim();if(!txt)return;
+ if(!cfg().url||!cfg().model){openDlg();return}
+ if(!chat())newChat();
+ const c=chat();c.msgs.push({role:"user",content:txt});
+ if(c.title==="New chat")c.title=txt.slice(0,40);
+ const a={role:"assistant",content:"",think:""};c.msgs.push(a);
+ $("in").value="";$("in").style.height="auto";busy=true;$("go").innerHTML="&#9632;";ctl=new AbortController();render();scroll();
+ const msgs=[];if(cfg().sys)msgs.push({role:"system",content:cfg().sys});
+ c.msgs.slice(0,-1).forEach(m=>{const t=m.role==="assistant"?splitThink(m).c:m.content;if(t)msgs.push({role:m.role,content:t})});
+ try{
+  const r=await fetch(base()+"/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},signal:ctl.signal,
+   body:JSON.stringify({model:cfg().model,messages:msgs,stream:true,keep_alive:-1,options:{temperature:cfg().temp,num_ctx:cfg().ctx}})});
+  if(!r.ok)throw new Error("Server returned HTTP "+r.status);
+  const rd=r.body.getReader(),dec=new TextDecoder();let buf="";
+  while(true){
+   const{done,value}=await rd.read();if(done)break;
+   buf+=dec.decode(value,{stream:true});
+   let i;while((i=buf.indexOf("\n"))>-1){
+    const line=buf.slice(0,i).trim();buf=buf.slice(i+1);if(!line)continue;
+    try{const j=JSON.parse(line);if(j.error)throw new Error(j.error);
+     if(j.message){a.content+=j.message.content||"";a.think+=j.message.thinking||""}}catch(e){if(e.message&&!(e instanceof SyntaxError))throw e}
+   }
+   const b=document.querySelector('.b[data-i="'+(c.msgs.length-1)+'"]');
+   if(b){const s=splitThink(a);b.innerHTML=(s.th?'<details class="t" open><summary>Thinking</summary><div>'+esc(s.th)+"</div></details>":"")+md(s.c)}
+   scroll();
+  }
+ }catch(e){
+  if(e.name==="AbortError")a.err="Stopped.";
+  else{a.err="Could not reach the server: "+e.message+"."+hint(e)+" Check the connection settings.";setStat("bad","Connection failed")}
+ }
+ busy=false;$("go").innerHTML="&#8593;";save();render();scroll();
+}
+$("go").onclick=send;
+$("in").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send()}});
+$("in").addEventListener("input",e=>{e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,200)+"px"});
+$("new").onclick=newChat;$("menu").onclick=()=>$("side").classList.toggle("on");
+$("stat").onclick=openDlg;$("close").onclick=()=>{applySettings();$("dlg").classList.remove("on");render()};
+$("conn").onclick=async()=>{applySettings();await connect()};
+$("temp").oninput=e=>$("tv").textContent=e.target.value;
+$("model").onchange=()=>{cfg().model=$("model").value;setStat("ok",cfg().model);save()};
+$("list").onclick=e=>{
+ const d=e.target.dataset.del;
+ if(d){S.chats=S.chats.filter(c=>c.id!==d);if(S.cur===d)S.cur=S.chats[0]?S.chats[0].id:null;save();render();return}
+ const it=e.target.closest(".ci");if(it){S.cur=it.dataset.id;save();render();$("side").classList.remove("on");scroll()}
+};
+$("chat").onclick=e=>{if(e.target.classList.contains("cp")){navigator.clipboard.writeText(e.target.nextElementSibling.textContent);e.target.textContent="Copied";setTimeout(()=>e.target.textContent="Copy",1200)}};
+if(cfg().url&&cfg().model)setStat("ok",cfg().model);
+if(!S.chats.length)newChat();else render();
+if(!cfg().url)openDlg();
+</script></body></html>
